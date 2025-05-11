@@ -43,35 +43,35 @@ layout = [
 
 ## Escala de cinza
 def apply_grayscale(img, params):
-    return img
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 ## Inversão de cores
 def apply_invert(img, params):
-    return img
+    return cv2.bitwise_not(img)
 
 ## Aumento de contraste
 def apply_contrast(img, params):
-    return img
+    return cv2.convertScaleAbs(img, alpha=1.5, beta=0)
 
 ## Desfoque
 def apply_blur(img, params):
-    return img
+    return cv2.GaussianBlur(img, (5, 5), 0)
 
 ## Nitidez
 def apply_sharpen(img, params):
-    return img
+    return cv2.addWeighted(img, 1.5, cv2.GaussianBlur(img, (0, 0), 3), -0.5, 0)
 
 ## Detecção de bordas com Canny
 def apply_edge_detection(img, params):
-    return img
+    return cv2.Canny(img, 100, 200)
 
 ## Rotação
 def apply_rotation(img, params):
-    return img
+    return cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 
 ## Redimensionamento
 def apply_resize(img, params):
-    return img
+    return cv2.resize(img, (int(img.shape[1] * 0.5), int(img.shape[0] * 0.5)))
 
 FILTERS = {
     'Escala de Cinza': apply_grayscale,
