@@ -37,3 +37,39 @@ layout = [
     [sg.Column(left_col), sg.Column(right_col)],
     [controls],
 ]
+
+def apply_grayscale(img, params):
+    return img
+
+def apply_invert(img, params):
+    return img
+
+def apply_contrast(img, params):
+    return img
+
+def apply_blur(img, params):
+    return img
+
+def apply_sharpen(img, params):
+    return img
+
+def apply_edge_detection(img, params):
+    return img
+
+def apply_rotation(img, params):
+    return img
+
+def apply_resize(img, params):
+    return img
+
+FILTERS = {
+    'Escala de Cinza': apply_grayscale,
+    'Inversão de Cores': apply_invert,
+    'Aumento de Contraste': apply_contrast,
+    'Desfoque': apply_blur,
+    'Nitidez': apply_sharpen,
+    'Detecção de Bordas': apply_edge_detection,
+    'Rotação': apply_rotation,
+    'Redimensionamento': apply_resize,
+}
+
