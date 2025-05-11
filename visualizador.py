@@ -11,12 +11,12 @@ MAX_DISPLAY_SIZE = (800, 600)
 ## Layout da interface gráfica
 left_col = [
     [sg.Text('Imagem Original')],
-    [sg.Image(key='-ORIGINAL-')],
+    [sg.Image(key='-ORIGINAL-', size=MAX_DISPLAY_SIZE)],
 ]
 
 right_col = [
     [sg.Text('Imagem Processada')],
-    [sg.Image(key='-PROCESSED-')],
+    [sg.Image(key='-PROCESSED-', size=MAX_DISPLAY_SIZE)],
 ]
 
 controls = [
@@ -33,6 +33,7 @@ controls = [
         key='-FILTER-', enable_events=True),
     sg.Button('Aplicar Filtro'),
     sg.Button('Salvar Imagem'),
+    sg.Button('Limpar'),
     sg.Text('Parâmetros:'),
     sg.Input(key='-PARAMS-', size=(10,1)),
 ]
@@ -68,11 +69,20 @@ def apply_edge_detection(img, params):
 
 ## Rotação
 def apply_rotation(img, params):
-    return cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    angle = int(params) if params.isdigit() else 90
+    num_rotations = angle // 90
+    rotation_code = cv2.ROTATE_90_CLOCKWISE
+    for _ in range(num_rotations % 4):
+        img = cv2.rotate(img, rotation_code)
+    return img
 
 ## Redimensionamento
 def apply_resize(img, params):
-    return cv2.resize(img, (int(img.shape[1] * 0.5), int(img.shape[0] * 0.5)))
+    try:
+        scale = float(params) if params else 0.5
+    except ValueError:
+        scale = 0.5
+    return cv2.resize(img, (0,0), fx=scale, fy=scale)
 
 FILTERS = {
     'Escala de Cinza': apply_grayscale,
@@ -100,7 +110,12 @@ def load_image(path):
 
 ## converter numpy array para imagem da lib de interface
 def np_to_pysimplegui(img_array):
-    img_pil = Image.fromarray(img_array)
+    if img_array is None:
+        return None
+    display_img = resize_for_display(img_array)
+    if len(display_img.shape) == 2:  # Grayscale
+        display_img = cv2.cvtColor(display_img, cv2.COLOR_GRAY2RGB)
+    img_pil = Image.fromarray(display_img)
     bio = io.BytesIO()
     img_pil.save(bio, format='PNG')
     return bio.getvalue()
@@ -136,16 +151,16 @@ while True:
                 window['-PROCESSED-'].update(data=np_to_pysimplegui(processed_image))
     
     ## Aplica filtro escolhido
-    if event == 'Aplicar Filtro' and current_image is not None:
+    if event == 'Aplicar Filtro' and processed_image is not None:
         selected_filter = values['-FILTER-']
         if selected_filter in FILTERS:
-            params = values['-PARAMS-']
-            if selected_filter in FILTERS:
-                filter_function = FILTERS[selected_filter]
-                processed_image = filter_function(current_image.copy(), params)
+            try:
+                new_image = FILTERS[selected_filter](processed_image.copy(), values['-PARAMS-'])
+                processed_image = new_image
                 window['-PROCESSED-'].update(data=np_to_pysimplegui(processed_image))
-            else:
-                sg.popup_error('Filtro selecionado é inválido ou não suportado.')
+                
+            except Exception as e:
+                sg.popup_error(f'Erro ao aplicar filtro: {str(e)}')
     
     ## Salvar imagem
     if event == 'Salvar Imagem' and processed_image is not None:
@@ -160,5 +175,13 @@ while True:
                     sg.popup_error('Erro ao converter a imagem para salvar.')
             else:
                 sg.popup_error('Imagem processada não encontrada.')
+
+    ## Limpar imagens
+    if event == 'Limpar':
+        processed_image = current_image.copy() if current_image is not None else None
+        window['-ORIGINAL-'].update(data=np_to_pysimplegui(current_image))
+        window['-PROCESSED-'].update(data=np_to_pysimplegui(processed_image))
+        window['-FILTER-'].update(value='')
+        window['-PARAMS-'].update(value='')
 
 window.close()
