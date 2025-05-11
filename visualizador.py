@@ -4,6 +4,9 @@ from PIL import Image, ImageTk
 import io
 import numpy as np
 
+current_image = None
+processed_image = None
+
 ## Layout da interface gráfica
 left_col = [
     [sg.Text('Imagem Original')],
@@ -98,3 +101,44 @@ def np_to_pysimplegui(img_array):
     return bio.getvalue()
 
 window = sg.Window('Visualizador de Imagens', layout, resizable=True)
+
+while True:
+    event, values = window.read()
+    
+    if event == sg.WIN_CLOSED:
+        break
+    
+    ## Carregamento (upload) de imagem
+    if event == 'Upar Imagem':
+        path = sg.popup_get_file('Selecione uma imagem', file_types=(("Imagens", "*.png;*.jpg;*.jpeg;*.bmp"),))
+        if path:
+            current_image = load_image(path)
+            if current_image is not None:
+                window['-ORIGINAL-'].update(data=np_to_pysimplegui(current_image))
+                processed_image = current_image.copy()
+                window['-PROCESSED-'].update(data=np_to_pysimplegui(processed_image))
+    
+    ## Aplica filtro escolhido
+    if event == 'Aplicar Filtro' and current_image is not None:
+        selected_filter = values['-FILTER-']
+        if selected_filter in FILTERS:
+            try:
+                params = values['-PARAMS-']
+                ## Aplicar filtro
+                processed_image = FILTERS[selected_filter](current_image.copy(), params)
+                ## Atualizar exibição
+                window['-PROCESSED-'].update(data=np_to_pysimplegui(processed_image))
+            except Exception as e:
+                sg.popup_error(f'Erro ao aplicar filtro: {str(e)}')
+    
+    ## Salvar imagem
+    if event == 'Salvar Imagem' and processed_image is not None:
+        save_path = sg.popup_get_file('Salvar imagem', save_as=True, file_types=(("PNG", "*.png"), ("JPEG", "*.jpg")))
+        if save_path:
+            try:
+                Image.fromarray(processed_image).save(save_path)
+                sg.popup('Imagem salva com sucesso!')
+            except Exception as e:
+                sg.popup_error(f'Erro ao salvar imagem: {str(e)}')
+
+window.close()
