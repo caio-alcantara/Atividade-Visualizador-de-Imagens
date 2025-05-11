@@ -6,6 +6,7 @@ import numpy as np
 
 current_image = None
 processed_image = None
+MAX_DISPLAY_SIZE = (800, 600)
 
 ## Layout da interface gráfica
 left_col = [
@@ -26,7 +27,7 @@ controls = [
         'Aumento de Contraste',
         'Desfoque',
         'Nitidez',
-        'Detecção de Bordas (Canny)',
+        'Detecção de Bordas',
         'Rotação',
         'Redimensionamento'], 
         key='-FILTER-', enable_events=True),
@@ -86,12 +87,16 @@ FILTERS = {
 
 ## Carregar imagem
 def load_image(path):
-    try:
-        image = cv2.imread(path)
-        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    except Exception as e:
-        sg.popup_error(f'Erro ao carregar imagem: {str(e)}')
+    if not path:
+        sg.popup_error('Caminho da imagem não fornecido.')
         return None
+
+    image = cv2.imread(path)
+    if image is None:
+        sg.popup_error('Erro ao carregar imagem. Verifique se o arquivo é válido.')
+        return None
+
+    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 ## converter numpy array para imagem da lib de interface
 def np_to_pysimplegui(img_array):
@@ -99,6 +104,16 @@ def np_to_pysimplegui(img_array):
     bio = io.BytesIO()
     img_pil.save(bio, format='PNG')
     return bio.getvalue()
+
+def resize_for_display(img_array):
+    if img_array is None:
+        return None
+        
+    height, width = img_array.shape[:2] if len(img_array.shape) == 3 else img_array.shape
+    ratio = min(MAX_DISPLAY_SIZE[0]/width, MAX_DISPLAY_SIZE[1]/height)
+    new_width = int(width * ratio)
+    new_height = int(height * ratio)
+    return cv2.resize(img_array, (new_width, new_height))
 
 window = sg.Window('Visualizador de Imagens', layout, resizable=True)
 
@@ -110,7 +125,9 @@ while True:
     
     ## Carregamento (upload) de imagem
     if event == 'Upar Imagem':
-        path = sg.popup_get_file('Selecione uma imagem', file_types=(("Imagens", "*.png;*.jpg;*.jpeg;*.bmp"),))
+        path = sg.popup_get_file('Selecione uma imagem', 
+                                file_types=(("Imagens", "*.png;*.jpg;*.jpeg;*.bmp;*.tiff;*.webp"), 
+                                ("Todos os arquivos", "*.*")))
         if path:
             current_image = load_image(path)
             if current_image is not None:
@@ -122,23 +139,26 @@ while True:
     if event == 'Aplicar Filtro' and current_image is not None:
         selected_filter = values['-FILTER-']
         if selected_filter in FILTERS:
-            try:
-                params = values['-PARAMS-']
-                ## Aplicar filtro
-                processed_image = FILTERS[selected_filter](current_image.copy(), params)
-                ## Atualizar exibição
+            params = values['-PARAMS-']
+            if selected_filter in FILTERS:
+                filter_function = FILTERS[selected_filter]
+                processed_image = filter_function(current_image.copy(), params)
                 window['-PROCESSED-'].update(data=np_to_pysimplegui(processed_image))
-            except Exception as e:
-                sg.popup_error(f'Erro ao aplicar filtro: {str(e)}')
+            else:
+                sg.popup_error('Filtro selecionado é inválido ou não suportado.')
     
     ## Salvar imagem
     if event == 'Salvar Imagem' and processed_image is not None:
         save_path = sg.popup_get_file('Salvar imagem', save_as=True, file_types=(("PNG", "*.png"), ("JPEG", "*.jpg")))
         if save_path:
-            try:
-                Image.fromarray(processed_image).save(save_path)
-                sg.popup('Imagem salva com sucesso!')
-            except Exception as e:
-                sg.popup_error(f'Erro ao salvar imagem: {str(e)}')
+            if processed_image is not None:
+                save_image = Image.fromarray(processed_image)
+                if save_image:
+                    save_image.save(save_path)
+                    sg.popup('Imagem salva com sucesso!')
+                else:
+                    sg.popup_error('Erro ao converter a imagem para salvar.')
+            else:
+                sg.popup_error('Imagem processada não encontrada.')
 
 window.close()
