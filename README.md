@@ -11,6 +11,8 @@ Este projeto implementa um **Visualizador de Imagens** em Python, com interface 
 
 ---
 
+**Vídeo de demonstração e explicação: https://drive.google.com/file/d/1lBFWsRgDwpxd3KPRuXnqcOONZWdSqgNn/view?usp=sharing**
+
 ## Pré-requisitos
 
 - Python 3.7+  
